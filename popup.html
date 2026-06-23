@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Threads Reply Deleter</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 340px;
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0a0a0f;
+      color: #f0f0f5;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* ---- HEADER ---- */
+    .header {
+      background: linear-gradient(135deg, #1a0533 0%, #0d0d1a 100%);
+      padding: 18px 20px 16px;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid #ffffff10;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle, #833ab440 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px #833ab460;
+    }
+
+    .header-text h1 {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -0.3px;
+      background: linear-gradient(90deg, #fff, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: #ffffff50;
+      margin-top: 1px;
+    }
+
+    .status-pill {
+      margin-left: auto;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: #ffffff15;
+      color: #aaa;
+      transition: all 0.2s;
+    }
+    .status-pill.running { background: #f59e0b20; color: #f59e0b; box-shadow: 0 0 8px #f59e0b40; }
+    .status-pill.done    { background: #22c55e20; color: #22c55e; box-shadow: 0 0 8px #22c55e40; }
+    .status-pill.error   { background: #ef444420; color: #ef4444; }
+
+    /* ---- STATS BAR ---- */
+    .stats-bar {
+      display: flex;
+      gap: 1px;
+      background: #ffffff08;
+      border-bottom: 1px solid #ffffff08;
+    }
+
+    .stat {
+      flex: 1;
+      padding: 12px 8px;
+      text-align: center;
+      background: #0a0a0f;
+    }
+
+    .stat:first-child { border-right: 1px solid #ffffff08; }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+      background: linear-gradient(135deg, #c084fc, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-value.errors-val {
+      background: linear-gradient(135deg, #fb923c, #f43f5e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #ffffff40;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
+
+    /* ---- BODY ---- */
+    .body {
+      padding: 16px;
+    }
+
+    /* username */
+    .field-label {
+      font-size: 10px;
+      color: #ffffff40;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .username-wrap {
+      display: flex;
+      align-items: center;
+      background: #ffffff08;
+      border: 1px solid #ffffff12;
+      border-radius: 10px;
+      padding: 9px 12px;
+      margin-bottom: 12px;
+      transition: border-color 0.15s;
+    }
+    .username-wrap:focus-within { border-color: #833ab4; box-shadow: 0 0 0 2px #833ab420; }
+
+    .at { color: #833ab4; font-weight: 700; font-size: 14px; margin-right: 4px; }
+
+    .username-wrap input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+    }
+    .username-wrap input::placeholder { color: #ffffff25; font-weight: 400; }
+
+    /* delay */
+    .delay-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .delay-row .field-label { margin: 0; flex-shrink: 0; }
+
+    .delay-row input {
+      width: 70px;
+      background: #ffffff08;
+      border: 1px solid #ffffff12;
+      border-radius: 8px;
+      padding: 6px 10px;
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      text-align: center;
+      outline: none;
+    }
+    .delay-row input:focus { border-color: #833ab4; }
+    .delay-row span { font-size: 11px; color: #ffffff35; }
+
+    /* warning */
+    .warning {
+      background: #7c2d1220;
+      border: 1px solid #7c2d1240;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 11px;
+      color: #fb923c;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    /* buttons */
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+    .btn:last-child { margin-bottom: 0; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px #833ab450;
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px #833ab460; }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+
+    .btn-stop {
+      background: #ffffff08;
+      color: #f87171;
+      border: 1px solid #f8717130;
+    }
+    .btn-stop:hover:not(:disabled) { background: #f8717115; }
+    .btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-sm {
+      background: none;
+      color: #ffffff25;
+      font-size: 11px;
+      padding: 6px;
+      border-radius: 8px;
+      margin-bottom: 0;
+    }
+    .btn-sm:hover { color: #ffffff60; background: #ffffff08; }
+
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .btn-row .btn-sm { flex: 1; }
+
+    /* log */
+    .log-box {
+      background: #ffffff05;
+      border: 1px solid #ffffff0a;
+      border-radius: 10px;
+      padding: 8px 10px;
+      height: 110px;
+      overflow-y: auto;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      margin-bottom: 10px;
+      display: none;
+      scrollbar-width: thin;
+      scrollbar-color: #ffffff15 transparent;
+    }
+    .log-box.visible { display: block; }
+    .log-entry { margin-bottom: 3px; color: #ffffff50; line-height: 1.4; }
+    .log-entry.success { color: #4ade80; }
+    .log-entry.error   { color: #f87171; }
+    .log-entry.info    { color: #60a5fa; }
+
+    /* progress bar */
+    .progress-wrap { margin-bottom: 12px; display: none; }
+    .progress-wrap.visible { display: block; }
+    .progress-track { height: 4px; background: #ffffff10; border-radius: 99px; overflow: hidden; }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #833ab4, #fd1d1d, #fcb045);
+      background-size: 200% 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s ease;
+      animation: shimmer 2s linear infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* fun emoji bounce on delete */
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+    .stat-value.pop { animation: pop 0.2s ease; }
+
+    /* ---- GRAFFITI CELEBRATION ---- */
+    #graffiti-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    #graffiti-overlay.active { display: block; }
+
+    .graffiti-canvas {
+      position: absolute;
+      inset: 0;
+    }
+
+    .graffiti-msg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-8deg);
+      font-size: 28px;
+      font-weight: 900;
+      text-align: center;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #ff6b35, #f7c59f, #efefd0, #004e89, #1a936f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+      filter: drop-shadow(2px 2px 0px #000) drop-shadow(-1px -1px 0px #000);
+      animation: grafPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      pointer-events: all;
+      cursor: pointer;
+    }
+
+    @keyframes grafPop {
+      0% { transform: translate(-50%, -50%) rotate(-8deg) scale(0.3); opacity: 0; }
+      100% { transform: translate(-50%, -50%) rotate(-8deg) scale(1); opacity: 1; }
+    }
+
+    .spray-dot {
+      position: absolute;
+      border-radius: 50%;
+      animation: sprayFly 1s ease-out forwards;
+    }
+
+    @keyframes sprayFly {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(1) translate(var(--tx), var(--ty)); opacity: 0; }
+    }
+  
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">🧵</div>
+    <div class="header-text">
+      <h1>Reply Nuker</h1>
+      <p>Threads bulk delete tool</p>
+    </div>
+    <div class="status-pill" id="status-pill">Idle</div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-value" id="deleted-count">0</div>
+    <div class="stat-label">💥 Nuked</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value errors-val" id="error-count">0</div>
+    <div class="stat-label">💀 Errors</div>
+  </div>
+</div>
+
+<div class="body">
+
+  <div class="field-label">Your Threads Username</div>
+  <div class="username-wrap">
+    <span class="at">@</span>
+    <input type="text" id="username-input" placeholder="yourname" autocomplete="off" spellcheck="false"/>
+  </div>
+
+  <div class="warning">
+    ⚠️ Deleted replies are gone forever. No undo!
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+
+  <div class="log-box" id="log-box"></div>
+
+  <div class="delay-row">
+    <span class="field-label">Delay</span>
+    <input type="number" id="delay-input" value="1500" min="500" max="10000" step="100"/>
+    <span>ms between deletions</span>
+  </div>
+
+  <button class="btn btn-primary" id="btn-start">💣 Nuke My Replies</button>
+  <button class="btn btn-stop" id="btn-stop" disabled>⏹ Stop</button>
+
+  <div class="btn-row">
+    <button class="btn btn-sm" id="btn-clear-log" style="display:none">Clear log</button>
+    <button class="btn btn-sm" id="btn-reset">↺ Reset</button>
+  </div>
+
+</div>
+
+<script src="popup.js"></script>
+
+<div id="graffiti-overlay">
+  <canvas class="graffiti-canvas" id="graffiti-canvas"></canvas>
+  <div class="graffiti-msg" id="graffiti-msg" onclick="document.getElementById('graffiti-overlay').classList.remove('active')">
+    🎨 FULLY<br>NUKED!!<br>💣💥🔥
+  </div>
+</div>
+</body>
+</html>
